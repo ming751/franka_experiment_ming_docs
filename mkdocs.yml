@@ -1,6 +1,6 @@
 site_name: Franka Experiment Documentation
 site_description: Franka ROS1 / On-Orbit 架构 2.0 文档
-site_url: ""
+site_url: "https://ming751.github.io/franka_experiment_ming_docs/"
 repo_url: "https://github.com/ming751/franka_experiment_ming_docs"
 repo_name: "ming751/franka_experiment_ming_docs"
 

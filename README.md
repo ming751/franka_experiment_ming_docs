@@ -17,6 +17,8 @@
 
 ## 文档入口
 
+- 网页版文档（推荐）: <https://ming751.github.io/franka_experiment_ming_docs/>
+
 - [文档首页](docs/index.md)
 - [快速开始](docs/quickstart.md)
 - [架构总览](docs/architecture.md)
@@ -47,6 +49,11 @@ mkdocs build --strict
 
 ## 发布教程
 
+目标效果：
+
+- GitHub 仓库源码入口：<https://github.com/ming751/franka_experiment_ming_docs>
+- GitHub Pages 网页入口：<https://ming751.github.io/franka_experiment_ming_docs/>
+
 1. 在 GitHub 上创建一个新的公开仓库，例如：
 
 ```text
@@ -70,13 +77,33 @@ git remote add origin git@github.com:ming751/franka_experiment_ming_docs.git
 git push -u origin main
 ```
 
-4. 在毕业论文中引用文档入口：
+4. 在 GitHub 仓库页面打开：
 
 ```text
-https://github.com/ming751/franka_experiment_ming_docs
+Settings -> Pages
 ```
 
-或者直接引用文档目录：
+把 `Source` 设置为：
+
+```text
+GitHub Actions
+```
+
+不要点下面自动生成 Jekyll 的 `Configure` 按钮，仓库里的 workflow 会自己构建 MkDocs 并发布。
+
+5. 首次推送后，GitHub Actions 会自动发布网页。成功后可通过下面地址访问：
+
+```text
+https://ming751.github.io/franka_experiment_ming_docs/
+```
+
+6. 在毕业论文中引用文档入口：
+
+```text
+https://ming751.github.io/franka_experiment_ming_docs/
+```
+
+如果你还想同时给出源码形式的文档入口，也可以附上：
 
 ```text
 https://github.com/ming751/franka_experiment_ming_docs/tree/main/docs
