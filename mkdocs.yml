@@ -9,12 +9,40 @@ docs_dir: docs
 theme:
   name: material
   language: zh
+  icon:
+    logo: material/robot-industrial
+  font:
+    text: Inter
+    code: JetBrains Mono
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: cyan
+      toggle:
+        icon: material/brightness-7
+        name: 切换暗色模式
+    - scheme: slate
+      primary: indigo
+      accent: cyan
+      toggle:
+        icon: material/brightness-4
+        name: 切换亮色模式
   features:
     - navigation.tabs
     - navigation.sections
     - navigation.instant
+    - navigation.top
+    - navigation.indexes
     - toc.follow
     - content.code.copy
+    - content.code.annotate
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/ming751/franka_experiment_ming_docs
+
+copyright: "&copy; 2024 – 2026 Ming · Franka On-Orbit 2.0"
 
 extra_css:
   - assets/stylesheets/home.css
@@ -22,12 +50,9 @@ extra_css:
 nav:
   - 首页: index.md
   - 架构总览: architecture.md
-  - 模块说明: packages.md
   - 手动实验与调试: commands.md
-  - 绘图与后处理: plotting.md
-  - 模式与状态映射: mode-and-status.md
-  - 观测与日志: observability.md
-  - Debug Topics: debug-topics.md
+  - 数据与绘图: plotting.md
+  - 状态码与消息字典: reference.md
 
 markdown_extensions:
   - admonition

@@ -121,11 +121,35 @@ roslaunch on_orbit_bringup manual_experiment.launch \
 
 ---
 
-## 导航说明
+## 深入阅读
 
-更专门、更深入的组件参数以及底层原理，已拆解在如下页面中：
-
-* **[运行与命令](commands.md)**：包含 `planner_demo.py` 所有发送动作指令的指南，以及 Supervisor 的模式切换。
-* **[观测与日志](observability.md)**：详细记录 Debug Topic 的字段构成与实验录包的物理路径。
-* **[绘图与后处理](plotting.md)**：说明如何更改论文绘图阶段切割线、修改阈值对齐参数。
-* **[架构总览](architecture.md)**：深度剖析系统控制链路、层级划分与通讯拓扑。
+<div class="nav-grid">
+  <a class="nav-card" href="architecture/">
+    <span class="nav-icon">🏗️</span>
+    <div>
+      <h3>架构总览</h3>
+      <p>系统控制链路、分层拓扑与 Mermaid 数据流图。</p>
+    </div>
+  </a>
+  <a class="nav-card" href="commands/">
+    <span class="nav-icon">🛠️</span>
+    <div>
+      <h3>手动实验与调试</h3>
+      <p>Launch 参数、planner_demo 指令集、Supervisor 热切换。</p>
+    </div>
+  </a>
+  <a class="nav-card" href="plotting/">
+    <span class="nav-icon">📊</span>
+    <div>
+      <h3>数据与绘图</h3>
+      <p>实验日志器配置、数据目录结构、论文级绘图参数。</p>
+    </div>
+  </a>
+  <a class="nav-card" href="reference/">
+    <span class="nav-icon">📖</span>
+    <div>
+      <h3>状态码与消息字典</h3>
+      <p>Mode 映射、Debug Topic 字段、HQP 状态码、包索引。</p>
+    </div>
+  </a>
+</div>

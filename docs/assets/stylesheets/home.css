@@ -1,3 +1,4 @@
+/* ===== Original Card Styles ===== */
 .hero-grid {
   display: grid;
   grid-template-columns: 1.15fr 0.85fr;
@@ -155,12 +156,65 @@
   color: var(--md-default-fg-color--light);
 }
 
+/* ===== Navigation Cards (Homepage) ===== */
+
+.nav-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin: 1.2rem 0 2rem;
+}
+
+.nav-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.2rem 1.4rem;
+  border: 1px solid rgba(127, 140, 160, 0.15);
+  border-radius: 0.85rem;
+  background: var(--md-default-bg-color);
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.04);
+  text-decoration: none !important;
+  color: inherit !important;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+}
+
+.nav-card:hover {
+  border-color: var(--md-primary-fg-color);
+  box-shadow: 0 6px 24px rgba(55, 114, 255, 0.12);
+  transform: translateY(-2px);
+}
+
+.nav-icon {
+  flex-shrink: 0;
+  font-size: 1.6rem;
+  line-height: 1;
+  margin-top: 0.15rem;
+}
+
+.nav-card h3 {
+  margin: 0 0 0.3rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--md-default-fg-color);
+}
+
+.nav-card p {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--md-default-fg-color--light);
+}
+
+/* ===== Responsive ===== */
+
 @media screen and (max-width: 960px) {
   .hero-grid,
   .step-grid,
   .media-grid,
   .result-grid,
-  .link-grid {
+  .link-grid,
+  .nav-grid {
     grid-template-columns: 1fr;
   }
 
