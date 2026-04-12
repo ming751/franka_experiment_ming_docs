@@ -28,9 +28,6 @@ nav:
   - 模式与状态映射: mode-and-status.md
   - 观测与日志: observability.md
   - Debug Topics: debug-topics.md
-  - 文档维护: docs-workflow.md
-  - 设计记录:
-      - 真机模块化计划: real_robot_modularization_plan.md
 
 markdown_extensions:
   - admonition
