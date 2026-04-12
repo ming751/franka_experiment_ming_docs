@@ -1,158 +1,118 @@
 # 架构总览
 
-## 六大核心包
+Franka On-Orbit 2.0 系统在设计上遵循“高内聚、低耦合”的模块化原则。各核心功能由独立包承载，并通过标准的 ROS1 消息流与服务调用贯穿始终。
 
-| 包 | 语言 | 部署层 | 核心职责 | 关键交互 |
-| --- | --- | --- | --- | --- |
-| `on_orbit_msgs` | msg/srv | 接口层 | 定义统一消息与服务接口 | 所有包依赖 |
-| `on_orbit_control` | C++ | 实时控制层 | `imp` / `hqp` 控制器与 Franka 插件 | 接收 `/on_orbit/reference` |
-| `on_orbit_planners` | C++ | 规划层 | `decoupled` 与 `se3` 规划后端 | 消费 `PlannerCommand` |
-| `on_orbit_services` | Python | 路由层 | supervisor 模式切换与转发 | 连接 planner 与 controller |
-| `on_orbit_apps` | Python | 应用层 | demo、实验编排、可视化、日志 | 面向用户入口 |
-| `on_orbit_bringup` | launch/yaml | 集成层 | launch 入口与参数拼装 | 组合整套系统 |
+## 系统链路数据流向
 
-## 主消息流
+整个系统的运行可概括为自上而下的漏斗式计算：从上层用户意图出发，经由统一接口下放给特定的规划器，再将规划点阵通过路由中枢无缝派发至不同力矩控制器，最终下发至物理接口。
 
-```text
-用户命令
-  -> /on_orbit/planner/command
-  -> on_orbit_planners
-  -> /on_orbit/planners/<planner>/reference
-  -> on_orbit_supervisor
-  -> /on_orbit/reference
-  -> on_orbit_control
-  -> Franka / Gazebo
+以下为全景信息流拓扑图：
+
+```mermaid
+graph TD
+    %% Define Styles
+    classDef app fill:#e3f2fd,stroke:#1e88e5,stroke-width:2px;
+    classDef planner fill:#e8f5e9,stroke:#43a047,stroke-width:2px;
+    classDef supervisor fill:#fff3e0,stroke:#fb8c00,stroke-width:2px;
+    classDef control fill:#fce4ec,stroke:#d81b60,stroke-width:2px;
+    classDef visualizer fill:#f3e5f5,stroke:#8e24aa,stroke-width:2px;
+    classDef hardware fill:#cfd8dc,stroke:#546e7a,stroke-width:2px;
+    
+    subgraph 应用层 [on_orbit_apps]
+        Apps["planner_demo.py<br/>(发送绝对/相对轨迹靶点)"]:::app
+    end
+
+    subgraph 规划层 [on_orbit_planners]
+        CmdTopic(["话题: /on_orbit/planner/command"])
+        PlannerD["Decoupled Planner<br/>(五次多项式插值)"]:::planner
+        PlannerS["SE3 Planner<br/>(TOPPRA 参数化)"]:::planner
+    end
+
+    subgraph 路由与服务层 [on_orbit_services]
+        Supervisor{"on_orbit_supervisor<br/>(总线路由与状态仲裁)"}:::supervisor
+        Services[["服务: select_planner / controller<br/>set_mission_mode"]]
+    end
+
+    subgraph 控制层 [on_orbit_control]
+        RefTopic(["话题: /on_orbit/reference"])
+        CtrlIMP["IMP Controller<br/>(笛卡尔阻抗控制)"]:::control
+        CtrlHQP["HQP Controller<br/>(层级二次规划控制)"]:::control
+    end
+    
+    subgraph 物理与仿真层 [集成 / 底层]
+        Robot["Franka Hardware / Gazebo<br/>(hardware_interface)"]:::hardware
+    end
+
+    subgraph 观测与可视化 [Observability]
+        Viz["Foxglove / RViz<br/>(runtime_visualizer)"]:::visualizer
+    end
+
+    %% Data Flow
+    Apps --"1. 推送 PlannerCommand"--> CmdTopic
+    Apps -.调用.-> Services
+    
+    CmdTopic --> PlannerD
+    CmdTopic --> PlannerS
+    
+    PlannerD --"2. 抛出连续 ReferenceTrajectory"--> Supervisor
+    PlannerS --"2. 抛出连续 ReferenceTrajectory"--> Supervisor
+    
+    Services -.异步切换控制策略.-> Supervisor
+    Supervisor --"3. 透传所选轨迹"--> RefTopic
+    Supervisor --"动态激活 controller_manager"--> Robot
+    
+    RefTopic --> CtrlIMP
+    RefTopic --> CtrlHQP
+    
+    CtrlIMP --"4. 运算输出关节力矩"--> Robot
+    CtrlHQP --"4. 运算输出关节力矩"--> Robot
+    
+    %% Observability flows
+    Supervisor -.发布 ModeState.-> Viz
+    CtrlIMP -.发布 DebugState.-> Viz
+    CtrlHQP -.发布 DebugState.-> Viz
+    Robot -.反馈 FrankaStates.-> Viz
 ```
 
-## 包 / 节点 / 话题简图
+---
 
-### 包级视图
+## 模块分工解析
 
-```text
-on_orbit_apps
-  -> 发布 PlannerCommand / 调 supervisor service
-  -> on_orbit_planners
-  -> on_orbit_services
-  -> on_orbit_control
+各分层中的关键包职能如下，可结合上图查看：
 
-on_orbit_planners
-  -> 输出 planner-specific ReferenceTrajectory / PlannerStatus
-  -> on_orbit_services
+### 1. 应用入口层 (`on_orbit_apps`)
+面向开发者的触手。
+* **主要职责**：负责任务编排与参数转化。用户直接运行 `planner_demo.py` 或由 `experiment_runner.py` 发起自动化实验。这些入口将粗略的移动目标包装为标准的 `on_orbit_msgs/PlannerCommand` 进行广播。
 
-on_orbit_services
-  -> 转发统一 /on_orbit/reference
-  -> 选择 planner / controller
-  -> on_orbit_control
+### 2. 位姿规划层 (`on_orbit_planners`)
+承接上层需求并转化为物理可实现的高密度时间序列点阵。
+* **特征**：无论底下运行何种规划器，此层的统一输入必然是 `PlannerCommand`，统一输出必然是 `ReferenceTrajectory`。
+* **现有后端**：
+  * `decoupled`：基于五次多项式的高保真定长插值，适配 `imp` 控制器。
+  * `se3`：基于李代数的时间最优参数化寻址，适配复杂的 `hqp` 逻辑。
 
-on_orbit_control
-  -> 输出 ControllerDebug / active_reference_pose
-  -> Franka hardware 或 Gazebo
-```
+### 3. 路由仲裁层 (`on_orbit_services`)
+控制中枢大脑，消除系统状态发散的可能性。
+* **Supervisor**：汇聚所有 Planner 产生的密集轨迹线，依靠用户或 `rosservice` 调用的状态切换逻辑，精简出**唯一一条**合法轨迹发布至公用话题 `/on_orbit/reference` 喂给目标控制器。同时也负责向硬件底层的 `controller_manager` 发起实际的 Plugin 加载和停用请求。
 
-### 节点级视图
+### 4. 实时控制层 (`on_orbit_control`)
+高速运算力矩指令的插件层，通常在 1kHz 频率以上执行。
+* **公共数学库**：依托 `lib_class` 处理操作空间惯量、接触力估计、零空间映射等复杂矩阵代数。
+* **控制器集成**：通过从基类 `BaseController` 派生，各策略仅需实现专有的力矩计算。控制器不保存历史轨迹，严格依靠提取流经 `/on_orbit/reference` 对应时间截面的采样点进行闭环追捕。
 
-```text
-[planner_demo.py / experiment_runner.py]
-  -> /on_orbit/planner/command
-  -> [decoupled_planner] -----------------> /on_orbit/planners/decoupled/reference
-  -> [se3_planner] -----------------------> /on_orbit/planners/se3/reference
-  -> [decoupled_planner] -----------------> /on_orbit/planners/decoupled/status
-  -> [se3_planner] -----------------------> /on_orbit/planners/se3/status
+### 5. 接口统一层 (`on_orbit_msgs`)
+确保系统不会产生依赖地狱的骨架。
+* **极简原则**：无论底层怎么更换，所有跨包通信均严格限制在消息包定义的 `PlannerCommand` 和 `ReferenceTrajectory` 中，各层完全解耦互不感知。
 
-[/on_orbit_supervisor]
-  <- planner reference / status
-  -> /on_orbit/reference
-  -> /on_orbit/mode_state
-  -> /on_orbit_supervisor/debug/events
-  -> /controller_manager/*   (真机 / Gazebo 下切换控制器)
+### 6. 配置集成层 (`on_orbit_bringup`)
+拼图的核心组织者，聚合参数配置与多级 `launch`。
+* **分级调阅**：从 `hardware_stack.launch` 一路套用到面向最终场景的 `closed_loop_experiment.launch`，确保真机与 Gazebo 仿真能够复用同一套核心逻辑而仅需切换硬件宿主。
 
-[/imp_controller]  <- /on_orbit/reference
-  -> /imp_controller/debug/state
-  -> /imp_controller/debug/active_reference_pose
 
-[/hqp_controller]  <- /on_orbit/reference
-  -> /hqp_controller/debug/state
-  -> /hqp_controller/debug/active_reference_pose
+## 故障归因速查
 
-[runtime_visualizer.py / RViz / Foxglove]
-  <- /on_orbit/mode_state
-  <- /on_orbit/reference
-  <- /imp_controller/debug/state
-  <- /hqp_controller/debug/state
-  <- /franka_state_controller/franka_states
-```
-
-统一接口约束：
-
-- 任务输入统一为 `on_orbit_msgs/PlannerCommand`
-- 规划器输出统一为 `on_orbit_msgs/ReferenceTrajectory`
-- 控制器只根据 `header.stamp + time_from_start` 做实时采样追踪
-
-## launch 分层
-
-### 公开入口
-
-- `manual_experiment.launch`
-- `closed_loop_experiment.launch`
-- `planning_stack.launch`
-- `runtime_visualization.launch`
-
-### 底层 / 调试入口
-
-- `hardware_stack.launch`
-- `simulation_gazebo.launch`
-- `hardware_controller_only.launch`
-
-### 内部拼装件
-
-- `launch/includes/upper_stack.launch`
-- `on_orbit_planners/launch/includes/planners.launch`
-
-## 谁负责什么
-
-如果只想快速知道“问题大概率在哪一层”，可以按下面的顺序看：
-
-- 命令没发出去：`on_orbit_apps`
-- planner 没出 reference：`on_orbit_planners`
-- reference 没被转发：`on_orbit_services`
-- 控制器没接管 / HQP 状态异常：`on_orbit_control`
-- 真机 / 仿真启动失败：`on_orbit_bringup`
-
-## 真机 / 仿真的复用原则
-
-真机与 Gazebo 的差异被限制在最底层硬件后端：
-
-- 真机：`franka_control + libfranka + Panda`
-- 仿真：`franka_gazebo + 模拟 Franka 硬件`
-
-而以下层面尽量保持一致：
-
-- `PlannerCommand` 统一命令入口
-- planner 输出结构
-- supervisor 路由逻辑
-- `/on_orbit/reference`
-- `imp` / `hqp` 控制器插件
-
-## 控制层说明
-
-`on_orbit_control` 当前由一个共享基类和两个控制器实现组成：
-
-- `BaseController`：reference 接收、轨迹采样、debug 发布、力矩限幅与下发
-- `ImpedanceController`：经典笛卡尔阻抗力矩控制
-- `HqpController`：基于 body frame 误差与二层 HQP 的控制器
-
-公共数学工具集中在 `lib_class` 中，包括：
-
-- Franka 模型数据封装
-- 操作空间惯量
-- 广义逆与零空间投影
-- 接触力估计与 `alpha` 平滑计算
-
-## planner 分层
-
-当前默认包含两个 planner：
-
-- `decoupled`：五次多项式插值，默认期望控制器 `imp`
-- `se3`：SE(3) / TOPPRA 风格时间参数化，默认期望控制器 `hqp`
-
-它们共享统一命令入口 `/on_orbit/planner/command`，内部通过 `PlannerCommand.planner_id` 决定是否消费命令。
+根据信息流单向传递的特性，当问题发生时，可逆推对应层级：
+* **发布移动目标无效**：检查 `on_orbit_apps` 是否成功建联并推入指令。
+* **无法生成轨迹警告**：检查 `on_orbit_planners` 输入目标的可达性与算法极点。
+* **控制器不转动但日志有下发**：检查 `on_orbit_services` 汇集轨迹后有没有因为 Supervisor 阻塞掉抛出。
+* **力矩抖动或关节限位**：检查 `on_orbit_control` 端矩阵解算边界或物理奇异性。
