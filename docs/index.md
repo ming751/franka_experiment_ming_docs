@@ -41,7 +41,34 @@ source /workspace/devel/setup.bash
 
 <br>
 
-### 4. 启动闭环仿真实验
+### 4. 关节空间初始化（推荐）
+
+在启动闭环实验前，建议先将机械臂归位至标准构型，避免后续笛卡尔空间实验在奇异姿态附近起步。
+
+需先在一个终端中拉起手动实验后端：
+```bash
+roslaunch on_orbit_bringup manual_experiment.launch
+```
+
+在另一个终端中，通过 `joint_posture_demo.py` 发送关节目标。支持直接传入关节角或使用 YAML 文件：
+
+=== "直接指定关节角"
+    ```bash
+    rosrun on_orbit_apps joint_posture_demo.py \
+      _joint_position:=[0.0,-0.785,0.0,-2.356,0.0,1.571,0.785]
+    ```
+
+=== "从 YAML 文件加载"
+    ```bash
+    rosrun on_orbit_apps joint_posture_demo.py \
+      _joint_position_file:=/workspace/src/on_orbit_apps/config/home_posture.yaml
+    ```
+
+归位完成后，该脚本会自动将控制器切回原先的 `imp` 或 `hqp`，随后可关闭手动实验后端，开始正式闭环。
+
+<br>
+
+### 5. 启动闭环仿真实验
 
 下发指令将自动启动 ROS Master、底层控制器以及规划器（SE3, Decoupled 等）。
 运行期间会进行多套架构的自动序列切换，并使用 `rosbag` 进行全景数据抓取，保存至 `/workspace/closed/` 目录下。
@@ -50,7 +77,16 @@ source /workspace/devel/setup.bash
 roslaunch on_orbit_bringup closed_loop_experiment.launch
 ```
 
-### 5. 科研结果绘图与指标计算
+??? tip "⚙️ 核心设定：闭环轨迹与约束在哪修改？"
+    `closed_loop_experiment.launch` 会根据内部状态机的执行阶段，自动加载 `src/on_orbit_apps/config/` 目录下的特征参数文件（如 `closed_loop_planner_demo_se3.yaml`）。
+    
+    这些 YAML 文件定义了：
+    - **`waypoints`**：自动化闭环追踪的多航点数组信息。
+    - **物理约束**：如 `v_max`、`a_max`、动作保持判断等控制界限。
+    
+    如需修改闭环过程中的目标点位或运动快慢，直接修改对应的 YAML 即可，无需重写底层应用。
+
+### 6. 科研结果绘图与指标计算
 
 闭环实验结束后，执行数据处理与分析脚本。算法将自动对齐各策略维度数据，最终输出高清晰度对比图（PNG 与纯矢量 PDF 格式）至 `/workspace/closed/publication/`。
 
@@ -67,7 +103,7 @@ python3 /workspace/src/on_orbit_apps/scripts/plot_experiment_publication.py
 
 <br>
 
-### 6. 进阶使用：Foxglove 调试面板
+### 7. 进阶使用：Foxglove 调试面板
 
 启动常规实验时，可通过附加 `start_foxglove_bridge:=true` 标志开启系统透传端口：
 
