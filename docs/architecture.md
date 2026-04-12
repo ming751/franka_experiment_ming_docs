@@ -78,41 +78,41 @@ graph TD
 
 ## 模块分工解析
 
-各分层中的关键包职能如下，可结合上图查看：
+各分层包职能说明如下（与拓扑图对应）：
 
 ### 1. 应用入口层 (`on_orbit_apps`)
-面向开发者的触手。
-* **主要职责**：负责任务编排与参数转化。用户直接运行 `planner_demo.py` 或由 `experiment_runner.py` 发起自动化实验。这些入口将粗略的移动目标包装为标准的 `on_orbit_msgs/PlannerCommand` 进行广播。
+外部调用接口与实验脚本所在层。
+* **主要职责**：任务编排与参数转化。通过 `planner_demo.py` 或 `experiment_runner.py` 发起实验，将目标位姿处理为 `on_orbit_msgs/PlannerCommand` 消息进行发布。
 
 ### 2. 位姿规划层 (`on_orbit_planners`)
-承接上层需求并转化为物理可实现的高密度时间序列点阵。
-* **特征**：无论底下运行何种规划器，此层的统一输入必然是 `PlannerCommand`，统一输出必然是 `ReferenceTrajectory`。
+接收离散位姿目标并负责轨迹生成与插值。
+* **共同通信特征**：订阅 `PlannerCommand`，发布时间序列的 `ReferenceTrajectory`。
 * **现有后端**：
-  * `decoupled`：基于五次多项式的高保真定长插值，适配 `imp` 控制器。
-  * `se3`：基于李代数的时间最优参数化寻址，适配复杂的 `hqp` 逻辑。
+  * `decoupled`：五次多项式定长插值，适配 `imp` 控制器。
+  * `se3`：基于 TOPPRA 的时间最优参数化轨迹生成，适配 `hqp` 控制器。
 
 ### 3. 路由仲裁层 (`on_orbit_services`)
-控制中枢大脑，消除系统状态发散的可能性。
-* **Supervisor**：汇聚所有 Planner 产生的密集轨迹线，依靠用户或 `rosservice` 调用的状态切换逻辑，精简出**唯一一条**合法轨迹发布至公用话题 `/on_orbit/reference` 喂给目标控制器。同时也负责向硬件底层的 `controller_manager` 发起实际的 Plugin 加载和停用请求。
+负责状态机管理与话题路由。
+* **Supervisor 节点**：订阅所有 Planner 的参考轨迹与状态，根据当前服务请求（如 `select_planner` 或 `select_controller`）选择对应轨迹，并转发至统一话题 `/on_orbit/reference`。同时，通过调用底层 `controller_manager` 服务实现对应控制器插件的加载、启动与停用。
 
 ### 4. 实时控制层 (`on_orbit_control`)
-高速运算力矩指令的插件层，通常在 1kHz 频率以上执行。
-* **公共数学库**：依托 `lib_class` 处理操作空间惯量、接触力估计、零空间映射等复杂矩阵代数。
-* **控制器集成**：通过从基类 `BaseController` 派生，各策略仅需实现专有的力矩计算。控制器不保存历史轨迹，严格依靠提取流经 `/on_orbit/reference` 对应时间截面的采样点进行闭环追捕。
+实时力矩计算逻辑层（默认 1kHz 执行频率）。
+* **公共数学库**：`lib_class` 提供操作空间惯量计算、接触力估计、零空间映射等代数计算支持。
+* **控制器插件**：继承自 `BaseController` 基类。控制器严格按照系统时钟提取 `/on_orbit/reference` 话题内对应时间戳的采样点，进行误差比对并下发关节力矩，内部不保留轨迹缓存。
 
 ### 5. 接口统一层 (`on_orbit_msgs`)
-确保系统不会产生依赖地狱的骨架。
-* **极简原则**：无论底层怎么更换，所有跨包通信均严格限制在消息包定义的 `PlannerCommand` 和 `ReferenceTrajectory` 中，各层完全解耦互不感知。
+定义系统内部自定义消息与服务。
+* **通信封装**：核心跨层通信数据结构为 `PlannerCommand` (规划输入) 与 `ReferenceTrajectory` (控制输入)，从而避免层级之间的直接代码依赖。
 
 ### 6. 配置集成层 (`on_orbit_bringup`)
-拼图的核心组织者，聚合参数配置与多级 `launch`。
-* **分级调阅**：从 `hardware_stack.launch` 一路套用到面向最终场景的 `closed_loop_experiment.launch`，确保真机与 Gazebo 仿真能够复用同一套核心逻辑而仅需切换硬件宿主。
+参数配置与启动文件（Launch）组织。
+* **分级调网**：包含 `hardware_stack.launch` 等底层入口，以及 `closed_loop_experiment.launch` 等高层入口。真机环境部署与 Gazebo 仿真均共享核心控制逻辑，仅依据参数引入不同的底层硬件。
 
 
-## 故障归因速查
+## 故障排查（按数据流）
 
-根据信息流单向传递的特性，当问题发生时，可逆推对应层级：
-* **发布移动目标无效**：检查 `on_orbit_apps` 是否成功建联并推入指令。
-* **无法生成轨迹警告**：检查 `on_orbit_planners` 输入目标的可达性与算法极点。
-* **控制器不转动但日志有下发**：检查 `on_orbit_services` 汇集轨迹后有没有因为 Supervisor 阻塞掉抛出。
-* **力矩抖动或关节限位**：检查 `on_orbit_control` 端矩阵解算边界或物理奇异性。
+根据数据流向，系统异常可按层级自顶向下排查：
+* **目标指令下发无响应**：检查 `on_orbit_apps` 脚本向话题发布指令的功能是否正常运行。
+* **缺少轨迹计算或报数学错误**：排查 `on_orbit_planners` 当中目标位姿可达性以及计算阈值保护。
+* **底层无反应但规划已有结果**：检查 `on_orbit_services` 中 Supervisor 的状态机流转情况，判断其转发器是否停用。
+* **运动产生异常抖动与限位极点**：检查 `on_orbit_control` 端内控参数（刚度、阻尼），或核查解算矩阵存在的奇异可能。
