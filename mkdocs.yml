@@ -23,7 +23,7 @@ nav:
   - 首页: index.md
   - 架构总览: architecture.md
   - 模块说明: packages.md
-  - 运行与命令: commands.md
+  - 手动实验与调试: commands.md
   - 绘图与后处理: plotting.md
   - 模式与状态映射: mode-and-status.md
   - 观测与日志: observability.md
