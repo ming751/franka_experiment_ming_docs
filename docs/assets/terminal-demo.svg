@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 560" role="img" aria-labelledby="title desc">
+  <title id="title">Terminal quickstart demo</title>
+  <desc id="desc">Animated terminal illustration for quickstart commands.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#111827"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#22c55e"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#020617" flood-opacity="0.35"/>
+    </filter>
+    <style>
+      .mono { font: 24px 'SFMono-Regular', Consolas, 'Liberation Mono', monospace; fill: #e5e7eb; }
+      .muted { fill: #94a3b8; }
+      .accent { fill: #7dd3fc; }
+      .success { fill: #86efac; }
+      .line { opacity: 0; animation: fade 9s linear infinite; }
+      .line2 { animation-delay: 1.6s; }
+      .line3 { animation-delay: 3.2s; }
+      .line4 { animation-delay: 5s; }
+      .cursor { animation: blink 1s steps(1) infinite; }
+      .scan { animation: pulse 4s ease-in-out infinite; }
+      @keyframes fade {
+        0%, 8% { opacity: 0; }
+        12%, 88% { opacity: 1; }
+        100% { opacity: 1; }
+      }
+      @keyframes blink {
+        0%, 48% { opacity: 1; }
+        50%, 100% { opacity: 0; }
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 0.26; }
+        50% { opacity: 0.54; }
+      }
+    </style>
+  </defs>
+
+  <rect x="60" y="38" width="840" height="484" rx="28" fill="url(#bg)" filter="url(#shadow)"/>
+  <rect x="60" y="38" width="840" height="56" rx="28" fill="#020617"/>
+  <rect x="60" y="66" width="840" height="28" fill="#020617"/>
+  <circle cx="102" cy="66" r="8" fill="#fb7185"/>
+  <circle cx="128" cy="66" r="8" fill="#fbbf24"/>
+  <circle cx="154" cy="66" r="8" fill="#34d399"/>
+  <text x="220" y="74" class="mono muted" font-size="18">ros1-franka /workspace</text>
+  <rect x="88" y="116" width="784" height="4" rx="2" fill="url(#glow)" class="scan"/>
+
+  <g class="line">
+    <text x="96" y="178" class="mono accent">$ docker compose up --build -d</text>
+    <text x="96" y="214" class="mono muted">[+] ros1-franka started, bridge ready, rviz optional</text>
+  </g>
+  <g class="line line2">
+    <text x="96" y="280" class="mono accent">$ roslaunch on_orbit_bringup closed_loop_experiment.launch</text>
+    <text x="96" y="316" class="mono muted">[planner] se3 ready   [controller] hqp ready   [logger] /workspace/closed</text>
+  </g>
+  <g class="line line3">
+    <text x="96" y="382" class="mono accent">$ python3 src/on_orbit_apps/scripts/plot_experiment_publication.py</text>
+    <text x="96" y="418" class="mono success">[ok] fig_force_comparison_motion.pdf</text>
+    <text x="96" y="454" class="mono success">[ok] fig_error_comparison_motion.pdf</text>
+  </g>
+  <g class="line line4">
+    <text x="96" y="492" class="mono muted">/workspace/closed/publication <tspan class="success">ready</tspan></text>
+    <rect x="508" y="472" width="14" height="26" fill="#e5e7eb" class="cursor"/>
+  </g>
+</svg>

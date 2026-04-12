@@ -16,6 +16,9 @@ theme:
     - toc.follow
     - content.code.copy
 
+extra_css:
+  - assets/stylesheets/home.css
+
 nav:
   - 首页: index.md
   - 快速开始: quickstart.md
@@ -32,6 +35,8 @@ nav:
 
 markdown_extensions:
   - admonition
+  - attr_list
+  - md_in_html
   - tables
   - toc:
       permalink: true
