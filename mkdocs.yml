@@ -21,7 +21,6 @@ extra_css:
 
 nav:
   - 首页: index.md
-  - 快速开始: quickstart.md
   - 架构总览: architecture.md
   - 模块说明: packages.md
   - 运行与命令: commands.md
@@ -42,3 +41,12 @@ markdown_extensions:
       permalink: true
   - codehilite:
       guess_lang: false
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.tasklist:
+      custom_checkbox: true
