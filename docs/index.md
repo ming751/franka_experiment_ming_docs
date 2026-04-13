@@ -1,11 +1,20 @@
-# Franka Experiment Documentation
-
-Franka ROS1 / On-Orbit 2.0 实验系统。
-本文档提供从容器环境启动、ROS1 算法栈编译、自动闭环仿真到一键生成科研论文图表的完整端到端工作流。
-
-<figure markdown="span" style="margin-top: 2rem; margin-bottom: 3rem; display: block; text-align: center;">
-  <img src="assets/terminal-demo.svg" alt="终端启动流程演示" style="width: 100%; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-</figure>
+<div class="hero-grid">
+  <div class="hero-copy">
+    <p class="hero-eyebrow">Franka On-Orbit 2.0</p>
+    <h1 class="hero-title" style="margin-top: 0;">Franka 实验框架</h1>
+    <p class="hero-lead">提供从容器环境启动、ROS1 算法栈编译、自动闭环仿真到一键生成科研论文图表的完整工作流。</p>
+    <div class="hero-actions">
+      <a href="#_1" class="md-button md-button--primary">快速开始</a>
+      <a href="architecture/" class="md-button">架构总览</a>
+    </div>
+  </div>
+  <div class="hero-preview">
+    <div class="hero-panel">
+      <img src="assets/experiment_record.gif" alt="Franka 闭环追踪实验记录">
+      <p class="panel-caption">SE(3) 跟踪与 HQP 实际响应</p>
+    </div>
+  </div>
+</div>
 
 ---
 
@@ -73,6 +82,10 @@ roslaunch on_orbit_bringup manual_experiment.launch
 下发指令将自动启动 ROS Master、底层控制器以及规划器（SE3, Decoupled 等）。
 运行期间会进行多套架构的自动序列切换，并使用 `rosbag` 进行全景数据抓取，保存至 `/workspace/closed/` 目录下。
 
+<figure markdown="span" style="margin-top: 1rem; margin-bottom: 1.5rem; display: block; text-align: center;">
+  <img src="assets/closed.gif" alt="闭环实验终端启动流程" style="width: 100%; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+</figure>
+
 ```bash
 roslaunch on_orbit_bringup closed_loop_experiment.launch
 ```
@@ -116,7 +129,7 @@ roslaunch on_orbit_bringup manual_experiment.launch \
 启动完成并在桌面端运行 Foxglove，连接至 `ws://localhost:8765` 即可获得涵盖 ModeState 与 3D 轨迹预演在内的全套运行时面板：
 
 <figure markdown="span" style="margin-top: 1rem; margin-bottom: 1rem; display: block; text-align: center;">
-  <img src="assets/foxglove-demo.svg" alt="Foxglove 面板展示" style="width: 100%; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+  <img src="assets/foxglove.png" alt="Foxglove 面板展示" style="width: 100%; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
 </figure>
 
 ---
